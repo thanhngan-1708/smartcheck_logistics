@@ -3,9 +3,9 @@ import pandas as pd
 from datetime import datetime
 
 # Thiết lập giao diện trang web
-st.set_page_config(page_title="SmartCheck Logistics AI ", layout="wide")
+st.set_page_config(page_title="SmartCheck Logistics ", layout="wide")
 
-st.title("🚚 SmartCheck Logistics AI - Hệ thống Tiền Kiểm thông tin (Bước 2)")
+st.title("🚚 SmartCheck Logistics - Hệ thống Kiểm và phân tích dữ liệu vận tải")
 st.subheader("Ứng dụng hỗ trợ Phòng Điều Vận rà soát thông tin lô hàng trước khi lập kế hoạch vận tải")
 
 # Khu vực tải file Excel dữ liệu lên hệ thống
