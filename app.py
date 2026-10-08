@@ -80,4 +80,4 @@ if uploaded_file is not None:
         
     except Exception as error:
         st.error(f"Có lỗi cấu trúc dữ liệu xảy ra khi xử lý file: {error}")
-        st.info("Mẹo: Hãy chắc chắn file Excel của bạn có đủ các cột: container_to_khai, container_booking, trong_luong_hang, tai_trong_cho_phep, ten_tai_xe, so_gio_da_lai, thoi_gian_xuat_phat, closing_time_tau"
+        st.info("Mẹo: Hãy chắc chắn file Excel của bạn có đủ các cột: container_to_khai, container_booking, trong_luong_hang, tai_trong_cho_phep, ten_tai_xe, so_gio_da_lai, thoi_gian_xuat_phat, closing_time_tau")
