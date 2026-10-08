@@ -5,7 +5,7 @@ from datetime import datetime
 # Thiết lập giao diện trang web
 st.set_page_config(page_title="SmartCheck Logistics AI", layout="wide")
 
-st.title("🚚 SmartCheck Logistics AI - Hệ thống Tiền Kiểm & Phân Tích Rủi Rô (Bước 2)")
+st.title("🚚 SmartCheck Logistics AI - Hệ thống Tiền Kiểm thong tin  (Bước 2)")
 st.subheader("Ứng dụng hỗ trợ Phòng Điều Vận rà soát thông tin lô hàng trước khi lập kế hoạch vận tải")
 
 # Khu vực tải file Excel dữ liệu lên hệ thống
