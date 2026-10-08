@@ -1,115 +1,83 @@
-import streamlit as st
+mport streamlit as st
 import pandas as pd
 from datetime import datetime
-import io
 
-# --------------------------------------------------
-# CONFIG CẤU HÌNH GIAO DIỆN WEB
-# --------------------------------------------------
-st.set_page_config(
-    page_title="SmartCheck Logistics AI",
-    page_icon="🚚",
-    layout="wide"
-)
+# Thiết lập giao diện trang web
+st.set_page_config(page_title="SmartCheck Logistics AI", layout="wide")
 
-class SmartCheckLogisticsApp:
-    def ai_extract_ocr(self, document_type, file_content):
-        return file_content
+st.title("🚚 SmartCheck Logistics AI - Hệ thống Điều Vận & Tiền Kiểm Thông Minh")
+st.subheader("Hỗ trợ Phòng Điều Vận rà soát Chứng từ, Tải trọng, Thời gian và An toàn Tài xế")
 
-    def cross_check_and_audit(self, custom_declaration, booking_note, do_document):
-        errors = []
-        
-        custom_data = self.ai_extract_ocr("Tờ khai Hải quan", custom_declaration)
-        booking_data = self.ai_extract_ocr("Booking Note", booking_note)
-        do_data = self.ai_extract_ocr("Lệnh giao hàng D/O", do_document)
-        
-        container_custom = str(custom_data.get("container_no", "")).strip().upper()
-        container_booking = str(booking_data.get("container_no", "")).strip().upper()
-        
-        # 1. Kiểm tra mã Container
-        if container_custom != container_booking:
-            errors.append(f"LỆCH CONTAINER: Tờ khai ({container_custom}) vs Booking ({container_booking})")
-
-        # 2. Kiểm tra hạn D/O
-        try:
-            do_expiry_date = datetime.strptime(str(do_data.get("expiry_date", "")).strip(), "%Y-%m-%d")
-            current_date = datetime.now()
-            if current_date > do_expiry_date:
-                errors.append(f"HẾT HẠN D/O: Hết hạn từ ngày {do_data.get('expiry_date')}")
-        except ValueError:
-            errors.append("LỖI ĐỊNH DẠNG: Ngày trên D/O không hợp lệ (Cần YYYY-MM-DD)")
-
-        if len(errors) > 0:
-            return "🔴 KHÓA LỆNH", " | ".join(errors)
-        else:
-            return "🟢 ĐÃ DUYỆT", f"Khớp 100% (Container: {container_custom})"
-
-app = SmartCheckLogisticsApp()
-
-# --------------------------------------------------
-# GIAO DIỆN HIỂN THỊ TRÊN TRÌNH DUYỆT WEB
-# --------------------------------------------------
-st.title("🚚 SmartCheck Logistics AI - Hệ thống Tiền Kiểm Chứng Từ")
-st.markdown("""
-Ứng dụng hỗ trợ phòng *Operations/Logistics* đối chiếu chéo thông tin Tờ Khai, Booking Note, và D/O tự động từ File Excel đầu vào nhằm ngăn chặn rủi ro phát sinh chi phí phạt tại Cảng.
-""")
-
-st.divider()
-
-st.sidebar.header("📁 Hướng dẫn File Excel mẫu")
-st.sidebar.markdown("""
-File Excel của bạn cần có chính xác 3 cột sau ở hàng đầu tiên:
-1. container_to_khai
-2. container_booking
-3. expiry_date (Định dạng: YYYY-MM-DD)
-""")
-
-uploaded_file = st.file_uploader("Kéo và thả file Excel danh sách lô hàng vào đây để kiểm tra", type=["xlsx", "xls"])
+# Khu vực tải file Excel dữ liệu lên hệ thống
+uploaded_file = st.file_uploader("Kéo và thả file Excel điều xe vào đây để hệ thống tiền kiểm tự động", type=["xlsx", "xls"])
 
 if uploaded_file is not None:
     try:
-        df = pd.read_excel(uploaded_file, dtype=str)
-        required_columns = ['container_to_khai', 'container_booking', 'expiry_date']
-        missing_cols = [col for col in required_columns if col not in df.columns]
+        # Đọc dữ liệu từ file Excel
+        df = pd.read_excel(uploaded_file)
         
-        if missing_cols:
-            st.error(f"❌ File Excel thiếu các cột bắt buộc sau: {', '.join(missing_cols)}")
-        else:
-            st.success(f"📥 Đã tải lên thành công danh sách gồm *{len(df)}* lô hàng!")
+        # Tạo danh sách để chứa kết quả kiểm tra
+        ket_qua = []
+        
+        # Vòng lặp quét qua từng dòng dữ liệu của lô hàng
+        for index, row in df.iterrows():
+            trang_thai = "🟢 ĐÃ DUYỆT"
+            chi_tiet_loi = "Mọi thông tin hợp lệ, đủ điều kiện điều xe."
             
-            if st.button("🚀 BẮT ĐẦU QUÉT ĐỐI CHIẾU AI", type="primary"):
-                df['Trạng thái AI'] = ""
-                df['Chi tiết lỗi rủi ro'] = ""
-                
-                with st.spinner("Hệ thống AI đang tiến hành quét dữ liệu và đối chiếu..."):
-                    for index, row in df.iterrows():
-                        doc_to_khai = {"container_no": row['container_to_khai']}
-                        doc_booking  = {"container_no": row['container_booking']}
-                        doc_do       = {"expiry_date": row['expiry_date']}
-                        
-                        trang_thai, chi_tiet = app.cross_check_and_audit(doc_to_khai, doc_booking, doc_do)
-                        
-                        df.at[index, 'Trạng thái AI'] = trang_thai
-                        df.at[index, 'Chi tiết lỗi rủi ro'] = chi_tiet
-                
-                st.balloons()
-                st.subheader("📊 Kết quả phân tích rủi ro hệ thống:")
-                st.dataframe(df, use_container_width=True)
-                
-                output = io.BytesIO()
-                with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
-                    df.to_excel(writer, index=False, sheet_name='Ket_Qua_Quet_AI')
-                processed_data = output.getvalue()
-                
-                st.markdown("---")
-                st.download_button(
-                    label="💾 TẢI FILE BÁO CÁO KẾT QUẢ (EXCEL)",
-                    data=processed_data,
-                    file_name="ket_qua_doi_chieu_logistics_ai.xlsx",
-                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                )
-                
-    except Exception as e:
-        st.error(f"Có lỗi xảy ra khi xử lý file: {e}")
-else:
-    st.info("💡 Vui lòng tải file Excel lên để hệ thống bắt đầu kiểm tra tự động.")
+            # 1. KIỂM TRA ĐỐI CHIẾU CHỨNG TỪ (MÃ CONTAINER)
+            if str(row['container_to_khai']).strip() != str(row['container_booking']).strip():
+                trang_thai = "🔴 KHÓA LỆNH"
+                chi_tiet_loi = f"LỆCH CONTAINER: Hải quan ({row['container_to_khai']}) vs Hãng tàu ({row['container_booking']})"
+            
+            # 2. KIỂM TRA GIỚI HẠN TẢI TRỌNG (TRÁNH PHẠT QUÁ TẢI)
+            elif float(row['trong_luong_hang']) > float(row['tai_trong_cho_phep']):
+                trang_thai = "🔴 KHÓA LỆNH"
+                chi_tiet_loi = f"QUÁ TẢI TRỌNG: Hàng nặng {row['trong_luong_hang']} tấn vượt tải xe cho phép {row['tai_trong_cho_phep']} tấn"
+            
+            # 3. KIỂM TRA TRẠNG THÁI AN TOÀN TÀI XẾ (GIỜ LÁI XE)
+            elif float(row['so_gio_da_lai']) >= 8.0:
+                trang_thai = "🟡 CẢNH BÁO"
+                chi_tiet_loi = f"AN TOÀN TÀI XẾ: Tài xế {row['ten_tai_xe']} đã lái {row['so_gio_da_lai']} tiếng, cần đổi tài xế dự phòng"
+            
+            # 4. KIỂM TRA THỜI GIAN VẬN CHUYỂN (TRÁNH RỚT TÀU)
+            else:
+                try:
+                    tg_xuat_phat = pd.to_datetime(row['thoi_gian_xuat_phat'])
+                    closing_time = pd.to_datetime(row['closing_time_tau'])
+                    # Tính khoảng thời gian chênh lệch từ lúc chạy đến lúc đóng hòm
+                    thoi_gian_con_lai = (closing_time - tg_xuat_phat).total_seconds() / 3600
+                    
+                    # Nếu thời gian còn lại ít hơn 4 tiếng
+                    if thoi_gian_con_lai < 4.0:
+                        trang_thai = "🟡 CẢNH BÁO"
+                        chi_tiet_loi = f"RỦI RO TRỄ CHUYẾN: Thời gian từ lúc xuất phát đến lúc cắt máng chỉ còn {thoi_gian_con_lai:.1f} giờ"
+                except:
+                    pass
+            
+            # Lưu kết quả phân tích dòng này vào mảng
+            ket_qua.append({
+                "STT": index + 1,
+                "Tài Xế": row.get('ten_tai_xe', 'N/A'),
+                "Mã Container (Tờ Khai)": row['container_to_khai'],
+                "Trạng Thái AI": trang_thai,
+                "Chi Tiết Phân Tích Rủi Ro": chi_tiet_loi
+            })
+            
+        # Chuyển mảng kết quả thành bảng dữ liệu
+        df_ket_qua = pd.DataFrame(ket_qua)
+        
+        st.success(f"🎉 Hệ thống đã quét hoàn tất danh sách gồm {len(df)} lô hàng!")
+        st.subheader("📊 Kết quả phân tích rủi ro vận hành đa tầng:")
+        
+        # Hàm tô màu hiển thị trực quan cho bảng kết quả trên web
+        def format_status(val):
+            if "🔴" in str(val): return 'background-color: #ffcccc; color: #cc0000; font-weight: bold;'
+            if "🟡" in str(val): return 'background-color: #fff2cc; color: #cc9900; font-weight: bold;'
+            return 'background-color: #d9ead3; color: #274e13;'
+            
+        df_styled = df_ket_qua.style.map(format_status, subset=['Trạng Thái AI'])
+        st.dataframe(df_styled, use_container_width=True)
+        
+    except Exception as error:
+        st.error(f"Có lỗi cấu trúc dữ liệu xảy ra khi xử lý file: {error}")
+        st.info("Mẹo: Hãy chắc chắn file Excel của bạn có đủ các cột: container_to_khai, container_booking, trong_luong_hang, tai_trong_cho_phep, ten_tai_xe, so_gio_da_lai, thoi_gian_xuat_phat, closing_time_tau"
