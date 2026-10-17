@@ -135,7 +135,7 @@ def check_shipment(row, checked_at):
     container_decl = clean_text(row["container_to_khai"])
     container_booking = clean_text(row["container_booking"])
     expiry_raw = row["expiry_date"]
-    weight_raw = row["trong_luong_hang"]
+    weight_raw = row["trong_luong_hang (Kg)"]
     closing_raw = row["closing_time_tau"]
 
     # 1. KIỂM TRA THIẾU THÔNG TIN
